@@ -1,0 +1,6 @@
+{
+  "name": "Futures Lab — Bitget Demo Bot",
+  "description": "Multi-user futures demo trading terminal with Bitget UTA v3 integration, local connector execution, baseline EMA-RSI-ATR strategy, and verified trade analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
