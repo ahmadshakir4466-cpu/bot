@@ -26,6 +26,7 @@ import {
   SignalDecision,
   UserProfile,
 } from '../shared/types.ts';
+import { safeFetchJson, safePollJson } from './utils/api.ts';
 import { Wrench, X } from 'lucide-react';
 
 export default function App() {
@@ -55,11 +56,10 @@ export default function App() {
       const storedToken = localStorage.getItem('fl_session_token');
       if (storedToken) {
         try {
-          const res = await fetch('/api/auth/me', {
+          const data = await safeFetchJson<{ user: UserProfile }>('/api/auth/me', {
             headers: { Authorization: `Bearer ${storedToken}` },
           });
-          if (res.ok) {
-            const data = await res.json();
+          if (data?.user) {
             setUser(data.user);
             setSessionToken(storedToken);
             return;
@@ -71,13 +71,12 @@ export default function App() {
 
       // Default to demo operator for immediate evaluation
       try {
-        const res = await fetch('/api/auth/demo-login', {
+        const data = await safeFetchJson<{ user: UserProfile; token: string }>('/api/auth/demo-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ role: 'operator' }),
         });
-        if (res.ok) {
-          const data = await res.json();
+        if (data?.user && data?.token) {
           setUser(data.user);
           setSessionToken(data.token);
           localStorage.setItem('fl_session_token', data.token);
@@ -99,14 +98,14 @@ export default function App() {
 
       const [resStatus, resPositions, resOrders, resTrades, resPerf, resDecisions, resLogs, resDevices] =
         await Promise.all([
-          fetch('/api/bot/status', { headers }).then((r) => (r.ok ? r.json() : null)),
-          fetch('/api/positions', { headers }).then((r) => (r.ok ? r.json() : null)),
-          fetch('/api/orders', { headers }).then((r) => (r.ok ? r.json() : null)),
-          fetch('/api/trades', { headers }).then((r) => (r.ok ? r.json() : null)),
-          fetch('/api/performance', { headers }).then((r) => (r.ok ? r.json() : null)),
-          fetch('/api/decisions', { headers }).then((r) => (r.ok ? r.json() : null)),
-          fetch('/api/logs', { headers }).then((r) => (r.ok ? r.json() : null)),
-          fetch('/api/connector/devices', { headers }).then((r) => (r.ok ? r.json() : null)),
+          safePollJson<{ bot: BotState; metadata: ExchangeConnectionMetadata }>('/api/bot/status', { headers }),
+          safePollJson<{ positions: PositionRecord[] }>('/api/positions', { headers }),
+          safePollJson<{ orders: ExchangeOrder[] }>('/api/orders', { headers }),
+          safePollJson<{ trades: ClosedTrade[] }>('/api/trades', { headers }),
+          safePollJson<{ metrics: PerformanceMetrics }>('/api/performance', { headers }),
+          safePollJson<{ decisions: SignalDecision[] }>('/api/decisions', { headers }),
+          safePollJson<{ logs: ExecutionEvent[] }>('/api/logs', { headers }),
+          safePollJson<{ devices: ConnectorDevice[] }>('/api/connector/devices', { headers }),
         ]);
 
       if (resStatus) {
@@ -117,7 +116,7 @@ export default function App() {
       if (resOrders) setOrders(resOrders.orders || []);
       if (resTrades) setTrades(resTrades.trades || []);
       if (resPerf) setMetrics(resPerf.metrics || null);
-      if (resDecisions?.decisions?.length > 0) setLatestDecision(resDecisions.decisions[0]);
+      if (resDecisions?.decisions?.length) setLatestDecision(resDecisions.decisions[0]);
       if (resLogs) setLogs(resLogs.logs || []);
       if (resDevices) setDevices(resDevices.devices || []);
     } catch {
@@ -139,7 +138,7 @@ export default function App() {
     }
     setIsLoading(true);
     try {
-      const res = await fetch('/api/bot/command', {
+      await safeFetchJson('/api/bot/command', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,12 +146,7 @@ export default function App() {
         },
         body: JSON.stringify({ type, payload }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || 'Command failed');
-      } else {
-        await refreshData();
-      }
+      await refreshData();
     } catch (err: unknown) {
       alert((err as Error).message);
     } finally {
@@ -165,7 +159,7 @@ export default function App() {
     setDiagnosticLoading(true);
     setDiagnosticResult(null);
     try {
-      const res = await fetch('/api/bot/command', {
+      await safeFetchJson('/api/bot/command', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,10 +167,6 @@ export default function App() {
         },
         body: JSON.stringify({ type: 'RUN_DIAGNOSTIC' }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Diagnostic command failed');
-      }
       setDiagnosticResult(
         'Diagnostic command enqueued successfully. Local connector will execute preflight, place minimum demo entry, verify fill, place reduce-only exit, and reconcile flat. Excluded from strategy statistics.'
       );

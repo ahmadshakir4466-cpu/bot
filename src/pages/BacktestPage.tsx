@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FlaskConical, Play, AlertTriangle, ArrowRight, ShieldCheck } from 'lucide-react';
 import { BacktestResult } from '../../shared/types.ts';
+import { safeFetchJson } from '../utils/api.ts';
 
 interface BacktestPageProps {
   token?: string;
@@ -18,7 +19,7 @@ export const BacktestPage: React.FC<BacktestPageProps> = ({ token }) => {
     setError(null);
 
     try {
-      const res = await fetch('/api/backtest/run', {
+      const data = await safeFetchJson<{ result: BacktestResult }>('/api/backtest/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -26,11 +27,6 @@ export const BacktestPage: React.FC<BacktestPageProps> = ({ token }) => {
         },
         body: JSON.stringify({ symbol, initialCapital }),
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Backtest failed');
-      }
 
       setBacktestResult(data.result);
     } catch (err: unknown) {

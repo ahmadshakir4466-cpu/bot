@@ -13,6 +13,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { ConnectorDevice, ExchangeConnectionMetadata } from '../../shared/types.ts';
+import { safeFetchJson } from '../utils/api.ts';
 
 interface ConnectExchangePageProps {
   devices: ConnectorDevice[];
@@ -42,15 +43,14 @@ export const ConnectExchangePage: React.FC<ConnectExchangePageProps> = ({
   const generateCode = async () => {
     setIsGenerating(true);
     try {
-      const res = await fetch('/api/connector/pairing-code', {
+      const data = await safeFetchJson<{ pairingCode: string }>('/api/connector/pairing-code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
       });
-      const data = await res.json();
-      if (res.ok) {
+      if (data?.pairingCode) {
         setPairingCode(data.pairingCode);
       }
     } catch {
@@ -73,7 +73,7 @@ export const ConnectExchangePage: React.FC<ConnectExchangePageProps> = ({
     setTestResult(null);
 
     try {
-      const res = await fetch('/api/connector/test-connection', {
+      const data = await safeFetchJson<{ success: boolean; result: any; error?: string }>('/api/connector/test-connection', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,8 +86,7 @@ export const ConnectExchangePage: React.FC<ConnectExchangePageProps> = ({
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || 'Connection test failed');
       }
 

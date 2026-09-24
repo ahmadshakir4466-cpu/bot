@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Shield, Lock, Mail, ArrowRight, UserCheck } from 'lucide-react';
 import { UserProfile } from '../../shared/types.ts';
+import { safeFetchJson } from '../utils/api.ts';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -28,16 +29,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
-      const res = await fetch(endpoint, {
+      const data = await safeFetchJson<{ user: UserProfile; token: string }>(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Authentication failed');
-      }
 
       onSuccess(data.user, data.token);
       onClose();
@@ -52,15 +48,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/demo-login', {
+      const data = await safeFetchJson<{ user: UserProfile; token: string }>('/api/auth/demo-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Quick login failed');
-      }
+
       onSuccess(data.user, data.token);
       onClose();
     } catch (err: unknown) {

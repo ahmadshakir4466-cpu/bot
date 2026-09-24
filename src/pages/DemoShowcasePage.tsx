@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Globe, Copy, Check, ShieldCheck, AlertTriangle, Eye, Lock } from 'lucide-react';
 import { PerformanceMetrics, ShowcasePublication } from '../../shared/types.ts';
+import { safeFetchJson } from '../utils/api.ts';
 
 interface DemoShowcasePageProps {
   metrics: PerformanceMetrics | null;
@@ -23,7 +24,7 @@ export const DemoShowcasePage: React.FC<DemoShowcasePageProps> = ({
   const togglePublish = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch('/api/showcase/toggle', {
+      const data = await safeFetchJson<{ publication: ShowcasePublication }>('/api/showcase/toggle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,8 +35,7 @@ export const DemoShowcasePage: React.FC<DemoShowcasePageProps> = ({
           title,
         }),
       });
-      const data = await res.json();
-      if (res.ok) {
+      if (data?.publication) {
         setIsPublished(data.publication.isPublished);
       }
     } catch {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, Server, Users, Radio, Database, Clock, Lock } from 'lucide-react';
 import { ExecutionEvent } from '../../shared/types.ts';
+import { safeFetchJson } from '../utils/api.ts';
 
 interface AdminPageProps {
   token?: string;
@@ -15,21 +16,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ token }) => {
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
-        const [resStats, resAudit] = await Promise.all([
-          fetch('/api/admin/overview', {
+        const [dataStats, dataAudit] = await Promise.all([
+          safeFetchJson<{ stats: any }>('/api/admin/overview', {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch('/api/admin/audit', {
+          safeFetchJson<{ events: ExecutionEvent[] }>('/api/admin/audit', {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-
-        if (!resStats.ok) {
-          throw new Error('Admin role required. Access denied.');
-        }
-
-        const dataStats = await resStats.json();
-        const dataAudit = await resAudit.json();
 
         setStats(dataStats.stats);
         setAuditLogs(dataAudit.events || []);

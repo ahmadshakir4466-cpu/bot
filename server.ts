@@ -3,30 +3,14 @@
  * Mounts Express API on /api and Vite middleware on port 3000
  */
 
-import express from 'express';
 import path from 'node:path';
+import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import { apiRouter } from './server/routes.ts';
+import { app } from './server/app.ts';
+
+const PORT = Number(process.env.PORT) || 3000;
 
 async function startServer() {
-  const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
-
-  app.use(express.json());
-
-  // Mount API router
-  app.use('/api', apiRouter);
-
-  // Health check endpoint
-  app.get('/health', (_req, res) => {
-    res.json({
-      status: 'ok',
-      service: 'Futures Lab — Bitget Demo Bot',
-      environment: 'EXCHANGE_DEMO',
-      timestamp: new Date().toISOString(),
-    });
-  });
-
   const isProduction = process.env.NODE_ENV === 'production';
 
   if (isProduction) {
@@ -52,7 +36,13 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error('Fatal server startup error:', err);
-  process.exit(1);
-});
+// In local or container mode, start the HTTP listener.
+// When deployed as a Vercel Serverless Function, Vercel imports the app directly without listening.
+if (!process.env.VERCEL) {
+  startServer().catch((err) => {
+    console.error('Fatal server startup error:', err);
+    process.exit(1);
+  });
+}
+
+export default app;
